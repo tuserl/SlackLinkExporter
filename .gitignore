@@ -43,3 +43,8 @@ output.txt
 # Misc
 *.tmp
 *.bak
+
+# Slack Export directory (ignore contents, keep directory tracked via .gitkeep)
+slack_export/*
+!slack_export/.gitkeep
+

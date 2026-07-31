@@ -16,8 +16,11 @@ project/
 │
 ├── scanner.py
 ├── extract_urls.py
+├── downloader.py
 ├── test_scanner.py
 ├── test_extract_urls.py
+├── test_downloader.py
+├── FIX_HISTORY.md
 └── README.md
 ```
 
@@ -51,17 +54,79 @@ Output
 Exported 53 unique URLs.
 ```
 
-A file named
-
-```
-output.txt
-```
-
-will be created.
+A file named `output.txt` will be created.
 
 ---
 
-## 2. Use as a Python module
+## 2. Recursively search all JSON files in a directory and export image URLs
+
+To recursively scan a folder for all `.json` files, create a separate `output.txt` inside each folder containing JSON files, and export all merged image URLs to the main `output.txt`:
+
+```bash
+python extract_urls.py ./slack_export
+```
+
+Or to search the current directory and all subdirectories:
+
+```bash
+python extract_urls.py .
+```
+
+Output
+
+```
+Exported 150 unique URLs.
+```
+
+- Each subfolder containing JSON files will get an `output.txt` with URLs extracted from that specific folder.
+- A main `output.txt` containing all deduplicated image URLs across all subfolders will be created at the specified output path.
+
+
+---
+
+## 3. Auto-download all files to their respective parent folders
+
+To automatically download all extracted files from `output.txt` into each corresponding subfolder:
+
+```bash
+python downloader.py ./slack_export
+```
+
+Or to download files from a single `output.txt` file into its containing directory:
+
+```bash
+python downloader.py ./slack_export/general/output.txt
+```
+
+### Optional: Private Slack Token
+
+If your Slack export URLs require private authentication headers (`url_private` or `url_private_download`), pass your token as a command-line argument or set the `SLACK_TOKEN` environment variable:
+
+```bash
+python downloader.py ./slack_export xoxb-your-slack-token
+```
+
+Or set the environment variable:
+
+```bash
+export SLACK_TOKEN="xoxb-your-slack-token"
+python downloader.py ./slack_export
+```
+
+Output:
+
+```
+Downloading files from slack_export/general/output.txt...
+Downloaded 15 file(s) into slack_export/general
+Downloading files from slack_export/backend/output.txt...
+Downloaded 30 file(s) into slack_export/backend
+
+Completed: Downloaded 45 file(s) across 2 folder(s).
+```
+
+---
+
+## 4. Use as a Python module
 
 ```python
 from extract_urls import extract_image_urls
@@ -153,12 +218,18 @@ Run only the URL extraction tests:
 python -m unittest test_extract_urls.py
 ```
 
+Run only the downloader tests:
+
+```bash
+python -m unittest test_downloader.py
+```
+
 Expected output
 
 ```
-..
+.........
 ----------------------------------------------------------------------
-Ran 2 tests in 0.01s
+Ran 9 tests in 0.03s
 
 OK
 ```
@@ -183,9 +254,9 @@ list[pathlib.Path]
 
 ## extract_urls.py
 
-### `extract_image_urls(json_file)`
+### `extract_image_urls(target_path)`
 
-Extracts all unique image URLs from a Slack export JSON file.
+Extracts all unique image URLs from a single Slack export JSON file or recursively from a directory of JSON files.
 
 Returns
 
@@ -195,9 +266,9 @@ set[str]
 
 ---
 
-### `export_urls(json_file, output_file="output.txt")`
+### `export_urls(target_path, output_file="output.txt", split_by_folder=True)`
 
-Extracts all unique image URLs and writes them to an output text file.
+Extracts all unique image URLs from a single JSON file or recursively from a directory of JSON files. When `target_path` is a directory and `split_by_folder` is `True`, an `output.txt` is created inside each subfolder containing JSON files before merging all URLs into the top-level `output_file`.
 
 Returns
 
@@ -205,7 +276,33 @@ Returns
 int
 ```
 
-The number of unique URLs exported.
+The total number of unique URLs exported to the main output file.
+
+---
+
+## downloader.py
+
+### `download_all_in_directory(root_dir, token=None)`
+
+Recursively finds all `output.txt` files under `root_dir` and downloads all files into their respective parent folders.
+
+Returns
+
+```python
+dict[pathlib.Path, list[pathlib.Path]]
+```
+
+### `download_urls_from_file(output_file, token=None)`
+
+Reads URLs line-by-line from `output_file` and downloads each file into the directory containing `output_file`.
+
+Returns
+
+```python
+list[pathlib.Path]
+```
+
+
 
 ---
 
